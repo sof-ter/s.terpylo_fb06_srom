@@ -1,8 +1,6 @@
 import time
-import random
 
-hex_alphabet = ['0', '1', '2', '3', '4', '5', '6', '7',
-                '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
+hex_alphabet = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
 hex_binary_alphabet = {'0': '0000', '1': '0001', '2': '0010', '3': '0011', '4': '0100', '5': '0101', '6': '0110',
                        '7': '0111', '8': '1000', '9': '1001', 'A': '1010', 'B': '1011', 'C': '1100', 'D': '1101',
                        'E': '1110', 'F': '1111'}
@@ -104,19 +102,14 @@ def long_mul(num1, num2, hex_alphabet, base):
     return carry
 
 
-def long_pow(num, p, hex_alphabet, base):
-    product = '1'
+def long_pow(num, p, hex_alphabet, base):  # error !!!!!!
     p = convert_to_binary(p)
-    # p = p[::-1]
-    if p == '1':
-        return num
-    if p == '0':
-        return 1
-    else:
-        for digit in range(len(p)):
-            if p[digit] == '1':
-                product = long_mul(product, num, hex_alphabet, base)
-            num = long_mul(num, num, hex_alphabet, base)
+    product = '1'
+    for digit in range(len(p)):
+        if p[digit] == '1':
+            product = long_mul(product, num, hex_alphabet, base)
+        if digit != len(p) - 1:
+            product = long_mul(product, product, hex_alphabet, base)
     return product
 
 
@@ -130,7 +123,7 @@ def long_compare(num1, num2, hex_alphabet):
         return 1
     elif len(num1) < len(num2):
         return -1
-    for i in range(len(num1) -1, -1, -1):
+    for i in range(len(num1) - 1, -1, -1):
         if hex_alphabet.index(num1[i]) < hex_alphabet.index(num2[i]):
             return -1
         elif hex_alphabet.index(num1[i]) > hex_alphabet.index(num2[i]):
@@ -186,12 +179,116 @@ def long_div(num1, num2, hex_alphabet, base):
             remainder = long_sub(dividend, temp, hex_alphabet, base)
             # concat
             quotient = quotient + str(hex_alphabet[q_next])
+    if remainder == '0':
+        return [quotient.lstrip('0'), '0']
+    else:
+        return [quotient.lstrip('0'), remainder.lstrip('0')]
 
-    return quotient.lstrip('0'), remainder.lstrip('0')
+
+# LAB 2
+
+def odd_or_not(num1, hex_alphabet, base):
+    div_result = long_div(num1, '2', hex_alphabet, base)
+    if div_result[1] == '':
+        return True
+    else:
+        return False
 
 
-# x = '4676A'
-# y = 'A3453'
+def long_gcd(num1, num2, hex_alphabet, base):
+    result = '1'
+    while odd_or_not(num1, hex_alphabet, base) and odd_or_not(num2, hex_alphabet, base):
+        num1 = long_div(num1, '2', hex_alphabet, base)[0]
+        num2 = long_div(num2, '2', hex_alphabet, base)[0]
+        result = long_mul(result, '2', hex_alphabet, base)
+    while odd_or_not(num1, hex_alphabet, base) and not odd_or_not(num2, hex_alphabet, base):
+        num1 = long_div(num1, '2', hex_alphabet, base)[0]
+    while num2 != '0':
+        while odd_or_not(num2, hex_alphabet, base):
+            num2 = long_div(num2, '2', hex_alphabet, base)[0]
+        if long_compare(num1, num2, hex_alphabet) == 1: # num1 > num2
+            num1, num2 = num2, num1
+        num2 = long_sub(num2, num1, hex_alphabet, base)
+    result = long_mul(result, num1, hex_alphabet, base)
+
+    return result.lstrip('0')
+
+
+def long_lcm(num1, num2, hex_alphabet, base):
+    mul_result = long_mul(num1, num2, hex_alphabet, base)
+    gcd = long_gcd(num1, num2, hex_alphabet, base)
+    div_result = long_div(mul_result, gcd, hex_alphabet, base)[0]
+    return div_result
+
+
+def long_e_gcd(num1, num2, hex_alphabet, base):
+    while num2 != '0':
+        comparison = long_compare(num1, num2, hex_alphabet)
+        result = ''
+        if comparison == 1: # num1 > num2
+            result = long_div(num1, num2, hex_alphabet, base)[1]
+        elif comparison == -1:
+            result = long_div(num2, num1, hex_alphabet, base)[1]
+        num1 = num2
+        num2 = result
+        print("result: ", result)
+
+    return num1
+
+
+def barrett_reduction(num, mod, hex_alphabet, base):
+    b_2k = long_pow('10', str(len(n) * 2), hex_alphabet, base)
+    mu = long_div(b_2k, mod, hex_alphabet, base)[0]
+    div_result = long_div(num, mod, hex_alphabet, base)
+    if div_result[1] != '0':
+        k = len(mod)
+        n_len = len(num)
+        q1 = num[:n_len - (k - 1)]
+        # print("q1 = ", q1)
+        q2 = long_mul(q1, mu, hex_alphabet, base)
+        # print("q2 = ", q2)
+        q3 = q2[:len(q2) - (k + 1)]
+        # print("q3 = ", q3)
+        r = long_mul(q3, mod, hex_alphabet, base)
+        # print("after mul r = ", r)
+        r = long_sub(num, r, hex_alphabet, base)
+        # print("after sub r = ", r)
+        while long_compare(r, mod, hex_alphabet) == 1:
+            r = long_sub(r, mod, hex_alphabet, base)
+        return r.lstrip('0')
+    else:
+        return '0'
+
+
+def long_op_mod(num1, num2, mod, operation, hex_alphabet, base):
+    op_result = ''
+    if operation == 'add':
+        op_result = long_add(num1, num2, hex_alphabet, base)
+    elif operation == 'sub':
+        op_result = long_sub(num1, num2, hex_alphabet, base)
+    elif operation == 'mul':
+        op_result = long_mul(num1, num2, hex_alphabet, base)
+    if op_result != 'error':
+        mod_result = barrett_reduction(op_result, mod, hex_alphabet, base)
+    else:
+        mod_result = 'error'
+    return mod_result
+
+
+def long_pow_barret(num, p, mod, hex_alphabet, base):
+    p = convert_to_binary(p)
+    product = '1'
+    for digit in range(len(p)):
+        if p[digit] == '1':
+            product = long_mul(product, num, hex_alphabet, base)
+        if digit != len(p) - 1:
+            product = long_mul(product, product, hex_alphabet, base)
+        product = barrett_reduction(product, mod, hex_alphabet, base)
+    return product
+
+x = 'A2'
+y = '41'
+n = '1F'
 
 # 512
 # x = '4D3C91C579C2C6216567A5241614B561ADDF76C4BB659E6FE7F65FF76A918C843F0458B3EF457BCD9022D78798A29462EC99C74E6674690267D3E9844251B39D'
@@ -202,49 +299,23 @@ def long_div(num1, num2, hex_alphabet, base):
 # y = '3A7EF2554E8940FA9B93B2A5E822CC7BB262F4A14159E4318CAE3ABF5AEB1022EC6D01DEFAB48B528868679D649B445A753684C13F6C3ADBAB059D635A2882090FC166EA9F0AAACD16A062149E4A0952F7FAAB14A0E9D3CB0BE9200DBD3B0342496421826919148E617AF1DB66978B1FCD28F8408506B79979CCBCC7F7E5FDE7'
 
 # 2048
-x = '170076B15F9575D21DE39D5C429799BBCDDB867016DE2248E3CFDE73A4D70C8636A9E41ABE671E7B9FB4739A5FF64DF9D0D3A64E0C9B20BFE58F1C62B28477EE9FD202010BAC440ADF3CA016A32DB844F23DEC2AB93AE869A6262FC23C5CE419807CDBA930A5433884E3B34B22477289BD3A7712CDD4B4110BD9887E7428FDF78703A1E982F278420C2D60CA7A0ED76C91855E3147B50357074A04EAF6515F07C1D8967674C7577D4112652E8135D145329F0DAE738F75C35004A154F1C43449DB87B6BE0F3EBF5B3BA1016F0A04A10C7EA76C3D30EEDB34B1E6E1009B3FF5C987FA313097485E6F8C78744E2F49DF62D13AD204E00F731BAE0E085C353D8D75'
-y = '9D1C2D6E1591932F73C2F499C4E0A2E252DE828CDA7842CE0972C4101FE772B56C45C475EDDEDAEC2DBD13E375E02D2C149B69AB51FF3F94533CA34A815484EC86DACE936BDC62B5F3F9EB6F5BE6BD253E256181D35D7D63EE24459824D462C53676E3DFF98700415ADA65FDA7CBD3B3F359C817F52BEDA70C9DD85F68473C6B3CEBC5B7F698FF87B7BED132D299F68010583247B9C9792E809ED86C07B4D65C9E83AEE30897B0DAB7E5883EABE17B40B8F39267AC62377A6AFE0976AA0B81707282EB5FE59B66ED5EB1D3118CA3555F3AFCC28990AB016FE5B89D9159E6BB26151C923501F69629A0D75A6C06B8D0AA0364694DDCEDE35441E011347F85E621'
+# x = '170076B15F9575D21DE39D5C429799BBCDDB867016DE2248E3CFDE73A4D70C8636A9E41ABE671E7B9FB4739A5FF64DF9D0D3A64E0C9B20BFE58F1C62B28477EE9FD202010BAC440ADF3CA016A32DB844F23DEC2AB93AE869A6262FC23C5CE419807CDBA930A5433884E3B34B22477289BD3A7712CDD4B4110BD9887E7428FDF78703A1E982F278420C2D60CA7A0ED76C91855E3147B50357074A04EAF6515F07C1D8967674C7577D4112652E8135D145329F0DAE738F75C35004A154F1C43449DB87B6BE0F3EBF5B3BA1016F0A04A10C7EA76C3D30EEDB34B1E6E1009B3FF5C987FA313097485E6F8C78744E2F49DF62D13AD204E00F731BAE0E085C353D8D75'
+# y = '9D1C2D6E1591932F73C2F499C4E0A2E252DE828CDA7842CE0972C4101FE772B56C45C475EDDEDAEC2DBD13E375E02D2C149B69AB51FF3F94533CA34A815484EC86DACE936BDC62B5F3F9EB6F5BE6BD253E256181D35D7D63EE24459824D462C53676E3DFF98700415ADA65FDA7CBD3B3F359C817F52BEDA70C9DD85F68473C6B3CEBC5B7F698FF87B7BED132D299F68010583247B9C9792E809ED86C07B4D65C9E83AEE30897B0DAB7E5883EABE17B40B8F39267AC62377A6AFE0976AA0B81707282EB5FE59B66ED5EB1D3118CA3555F3AFCC28990AB016FE5B89D9159E6BB26151C923501F69629A0D75A6C06B8D0AA0364694DDCEDE35441E011347F85E621'
 
-print('X = ', x, '\n', 'length of X-string = ', len(x))
-print('Y = ', y, '\n', 'length of Y-string = ', len(y), '\n')
+print('X = ', x, '\t', 'length of X-string = ', len(x))
+print('Y = ', y, '\t', 'length of Y-string = ', len(y))
+print('N = ', n, '\t', 'length of N-string = ', len(n), '\n')
 
-t_add_start = time.process_time()
-print('result of add: ', long_add(x, y, hex_alphabet, base))
-t_add_finish = time.process_time()
-t_add_all = t_add_finish - t_add_start
-print('time for add func => ', t_add_all, '\n')
+print("result of power func (there was error last time): ", long_pow(x, y, hex_alphabet, base))
 
-t_sub_start = time.process_time()
-print('result of sub: ', long_sub(x, y, hex_alphabet, base))
-t_sub_finish = time.process_time()
-t_sub_all = t_sub_finish - t_sub_start
-print('time for sub func => ', t_sub_all, '\n')
-
-t_mul_start = time.process_time()
-mul_res = long_mul(x, y, hex_alphabet, base)
-print('result of mul: ', mul_res)
-t_mul_finish = time.process_time()
-t_mul_all = t_mul_finish - t_mul_start
-print('time for mul func => ', t_mul_all, '\n')
-
-t_div_start = time.process_time()
-print('result of div: ', long_div(x, y, hex_alphabet, base))
-t_div_finish = time.process_time()
-t_div_all = t_div_finish - t_div_start
-print('time for div func => ', t_div_all, '\n')
-
-t_mul_div_start = time.process_time()
-print('result of mul-div: ', long_div(mul_res, y, hex_alphabet, base))
-t_mul_div_finish = time.process_time()
-t_mul_div_all = t_mul_div_finish - t_mul_div_start
-print('time for mul-div func => ', t_div_all, '\n')
-
-# t_pow_start = time.process_time()
-# print("result of pow: ", long_pow(x, y, hex_alphabet, base))
-# t_pow_finish = time.process_time()
-# t_pow_all = t_pow_finish - t_pow_start
-# print("time for pow func => ", t_pow_all, "\n")
-
-
-
-
+# 1) обчислення НСД та НСК двох чисел;
+print('result of gcd: ', long_gcd(x, y, hex_alphabet, base))
+print('result of lcm: ', long_lcm(x, y, hex_alphabet, base))
+# 2) додавання чисел за модулем;
+print('result of addition with mod: ', long_op_mod(x, y, n, 'add', hex_alphabet, base))
+# 3) віднімання чисел за модулем;
+print('result of substitution with mod: ', long_op_mod(x, y, n, 'sub', hex_alphabet, base))
+# 4) множення чисел та піднесення чисел до квадрату за модулем;
+print('result of multiplication with mod: ', long_op_mod(x, y, n, 'mul', hex_alphabet, base))
+# 5) піднесення числа до багаторозрядного степеня d по модулю n.
+print('result of pow mod: ', long_pow_barret(x, y, n, hex_alphabet, base))
