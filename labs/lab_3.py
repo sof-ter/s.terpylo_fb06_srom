@@ -5,8 +5,8 @@ def set_field_generator(pow, list_of_components):
     return ''.join(str(x) for x in generator)
 
 
-generator = set_field_generator(233, [233, 9, 4, 1, 0])
-print('field generator: ', generator)
+generator = set_field_generator(233, [233, 9, 4, 1, 0])[::-1]
+# print('field generator: ', generator)
 
 
 def shift_left(num, k):
@@ -40,11 +40,15 @@ def compare_in_field(first_num, second_num):
         return 1
     elif len(first_num) < len(second_num):
         return -1
-    for i in range(len(first_num) - 1, -1, -1):
-        if int(first_num[i]) < int(second_num[i]):
-            return -1
-        elif int(first_num[i]) > int(second_num[i]):
-            return 1
+    elif len(first_num) == len(second_num):
+        for i in range(len(first_num) - 1, -1, -1):
+            if first_num[i] == second_num[i]:
+                pass
+            elif int(first_num[i]) < int(second_num[i]):
+                return -1
+            elif int(first_num[i]) > int(second_num[i]):
+                return 1
+
     return 0
 
 
@@ -52,38 +56,43 @@ def subtract_in_field(first_num, second_num):
     if first_num == '0' or second_num == '0':
         return second_num if first_num == 0 else first_num
     first_num, second_num = equalizes_lengths(first_num, second_num)
+    # print('reversed first number: ', first_num)
+    # print('reversed second number: ', second_num)
     difference = ''
     borrow = 0
     for digit1, digit2 in zip(first_num, second_num):
-        temp = (int(digit1) - int(digit2) - borrow) % 2
+        temp = (int(digit1) - int(digit2) - borrow)
+        # print(int(digit1), '-', int(digit2), '-', borrow, ' => temp=', temp)
         if temp >= 0:
             difference += str(temp)
             borrow = 0
-        else:
-            difference += str(temp)
+        elif temp == -1 or temp == -2:
+            difference += str(abs(temp) % 2)
             borrow = 1
     return remove_trailing_zeros(difference)
 
 
 def divide_in_field(first_num, second_num):
-    comparison = compare_in_field(first_num, second_num)
+    comparison = compare_in_field(first_num[::-1], second_num[::-1])
     if comparison == -1 or comparison == 0:
         return 0 if comparison == 0 else 0, first_num
     remainder = first_num
     length_divisor = len(second_num)
-    quotient = ''
-    while compare_in_field(remainder, second_num) != -1:
-        sub_num = shift_left(second_num, len(remainder) - length_divisor)
+    quotient = [0] * (len(remainder) - length_divisor + 1)
+    while compare_in_field(remainder[::-1], second_num[::-1]) != -1:
+        k = len(remainder) - length_divisor
+        sub_num = shift_left(second_num, k)
+        if compare_in_field(remainder[::-1], sub_num[::-1]) == -1:
+            sub_num = sub_num[:-1]
+            k -= 1
         result_of_subtract = subtract_in_field(remainder[::-1], sub_num[::-1])[::-1]
         remainder = result_of_subtract
-        quotient += '1'
-    if compare_in_field(remainder, second_num) == -1:
-        quotient += '0'
-    return quotient, remainder
+        quotient[k] = 1
+    return (''.join(str(x) for x in quotient)), remainder
 
 
 def modulo_in_field(num, generator):
-    return divide_in_field(num, generator)[1]
+    return divide_in_field(num, generator)[1][::-1]
 
 
 def add_in_field(first_num, second_num):
@@ -99,8 +108,7 @@ def add_in_field(first_num, second_num):
         summary += str(sum_digit)
     if carry != 0:
         summary += str(carry)
-    summary = modulo_in_field(summary[::-1], generator)
-    return summary[::-1]
+    return summary
 
 
 def multiply_in_field(first_num, second_num):
@@ -118,8 +126,7 @@ def multiply_in_field(first_num, second_num):
             temp_mul = shift_right(temp_mul, n)
             carry = add_in_field(carry, temp_mul)
         n += 1
-    carry = modulo_in_field(carry[::-1], generator)
-    return carry[::-1]
+    return carry
 
 
 def square_in_field(num):
@@ -138,7 +145,7 @@ def power_in_field(num, p):
 
 def trace_in_field(num, pow):
     trace = num
-    for x in range(0, pow-1):
+    for x in range(0, pow - 1):
         num = square_in_field(num)
         trace = add_in_field(trace, num)
     return trace
@@ -153,18 +160,50 @@ def inverse_in_field(num, pow):
     return inverse
 
 
-# first_num = '1101'
-# second_num = '101'
-second_num = '1001101111000101011001101101001000110001010000010111110011001001100101010010011101010010000011001'
-first_num = '11100001111100010101110011010111110101011000000010000101100001101101010100111010011001111110110001' \
-            '00000010011011110001010110011011110000001100010100010101111100110010011001010100100111010100101'
+# first_num = '10011011101'
+# second_num = '11010101'
+
+# first_num = '111000011001101'
+# second_num = '1001101111'
+
+# first_num = '11100001111100010101110011010111110101011000'
+# second_num = '1001101111000101011001101101001'
+
 # print('shift left: ', first_num, '->', shift_left(first_num, 3))
 # print('shift right: ', first_num, '->', shift_right(first_num, 3))
+# print('compare: ', first_num, '?', c, '=', compare_in_field(first_num[::-1], c[::-1]))
 
-print('addition: ', first_num, '+', second_num, '=', add_in_field(first_num[::-1], second_num[::-1])[::-1])
-print('multiplication: ', first_num, '*', second_num, '=', multiply_in_field(first_num[::-1], second_num[::-1])[::-1])
-print('square: ', first_num, '** 2 =', square_in_field(first_num[::-1])[::-1])
-print('subtract: ', first_num, '-', second_num, '=', subtract_in_field(first_num[::-1], second_num[::-1])[::-1])
-print('compare: ', first_num, '?', second_num, '=', compare_in_field(first_num[::-1], second_num[::-1]))
-print('divide: ', first_num, '/', second_num, '=', divide_in_field(first_num, second_num))
-print('power: ', first_num, '^', second_num, '=', power_in_field(first_num[::-1], second_num[::-1])[::-1])
+first_num = '1110000111110001010111001101011111010101100000001000010110000110110101010011101001100111111011000100000010011011110001010110011011110000001100010100010101111100110010011001010100100111010100101'
+second_num = '1001101111000101011001101101001000110001010000010111110011001001100101010010011101010010000011001'
+power_num = '1001'
+
+# summary = add_in_field(first_num[::-1], second_num[::-1])[::-1]
+# print('addition: ', first_num, '+', second_num, '=', modulo_in_field(summary, generator)[::-1])
+#
+# product = multiply_in_field(first_num[::-1], second_num[::-1])[::-1]
+# print('multiplication: ', first_num, '*', second_num, '=', modulo_in_field(product, generator)[::-1])
+#
+# square_product = square_in_field(first_num[::-1])[::-1]
+# print('square: ', first_num, '** 2 =', modulo_in_field(square_product, generator)[::-1])
+#
+# # print('subtract: ', first_num, '-', second_num, '=', subtract_in_field(first_num[::-1], second_num[::-1])[::-1])
+#
+# quotient, remainder = divide_in_field(first_num, second_num)
+# print('divide: ', first_num, '/', second_num, '= Q:', quotient[::-1], ', R:', remainder)
+#
+# power_product = power_in_field(first_num[::-1], power_num[::-1])[::-1]
+# print('power: ', first_num, '^', power_num, '=', modulo_in_field(power_product, generator)[::-1])
+
+#### TEST: (a + b) * c = a * c + c * b
+
+a = '111000011001101'
+b = '111000011001101'
+c = '1001101111'
+sum1_1 = add_in_field(a[::-1], b[::-1])[::-1]
+prod1_1 = multiply_in_field(sum1_1[::-1], c[::-1])[::-1]
+
+prod2_1 = multiply_in_field(a[::-1], c[::-1])[::-1]
+prod2_2 = multiply_in_field(c[::-1], b[::-1])[::-1]
+sum2_1 = add_in_field(prod2_1[::-1], prod2_2[::-1])[::-1]
+
+print('TEST:', prod1_1, '=', sum2_1)
